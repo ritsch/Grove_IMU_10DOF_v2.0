@@ -87,6 +87,11 @@ THE SOFTWARE.
 
 #endif
 
+#ifdef ESP32
+ #define min(a,b) ((a)<(b)?(a):(b))
+ #define BUFFER_LENGTH 64
+#endif
+    
 /** Default constructor.
  */
 I2Cdev::I2Cdev() {
