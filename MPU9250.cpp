@@ -35,6 +35,7 @@ THE SOFTWARE.
 */
 
 #include "MPU9250.h"
+#include <Wire.h>
 
 /** Default constructor, uses default I2C address.
  * @see MPU9250_DEFAULT_ADDRESS
@@ -61,7 +62,7 @@ MPU9250::MPU9250(uint8_t address) {
  * the default internal clock source.
  */
 void MPU9250::initialize() {
-    setClockSource(MPU9250_CLOCK_PLL_XGYRO);
+    __setClockSource(MPU9250_CLOCK_PLL_XGYRO);
     setFullScaleGyroRange(MPU9250_GYRO_FS_250);
     setFullScaleAccelRange(MPU9250_ACCEL_FS_2);
     setSleepEnabled(false); // thanks to Jack Elston for pointing this one out!
@@ -72,7 +73,12 @@ void MPU9250::initialize() {
  * @return True if connection is valid, false otherwise
  */
 bool MPU9250::testConnection() {
-    return getDeviceID() == 0x71;
+    Wire.beginTransmission(MPU9250_DEFAULT_ADDRESS);
+    byte error = Wire.endTransmission();
+    if (error == 0) {
+        return true;
+    }
+    return false;
 }
 
 // AUX_VDDIO register (InvenSense demo code calls this RA_*G_OFFS_TC)
@@ -2484,7 +2490,7 @@ uint8_t MPU9250::getClockSource() {
  * @see MPU9250_PWR1_CLKSEL_BIT
  * @see MPU9250_PWR1_CLKSEL_LENGTH
  */
-void MPU9250::setClockSource(uint8_t source) {
+void MPU9250::__setClockSource(uint8_t source) {
     I2Cdev::writeBits(devAddr, MPU9250_RA_PWR_MGMT_1, MPU9250_PWR1_CLKSEL_BIT, MPU9250_PWR1_CLKSEL_LENGTH, source);
 }
 
@@ -2983,7 +2989,9 @@ bool MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
     uint16_t i;
     uint8_t j;
     if (verify) verifyBuffer = (uint8_t *)malloc(MPU9250_DMP_MEMORY_CHUNK_SIZE);
+	else verifyBuffer = NULL;
     if (useProgMem) progBuffer = (uint8_t *)malloc(MPU9250_DMP_MEMORY_CHUNK_SIZE);
+	else progBuffer = NULL;
     for (i = 0; i < dataSize;) {
         // determine correct chunk size according to bank position and data size
         chunkSize = MPU9250_DMP_MEMORY_CHUNK_SIZE;
@@ -3058,7 +3066,7 @@ bool MPU9250::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
     uint16_t i, j;
     if (useProgMem) {
         progBuffer = (uint8_t *)malloc(8); // assume 8-byte blocks, realloc later if necessary
-    }
+    }else progBuffer =NULL;
 
     // config set data is a long string of blocks with the following structure:
     // [bank] [offset] [length] [byte[0], byte[1], ..., byte[length]]
